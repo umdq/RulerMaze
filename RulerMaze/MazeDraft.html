@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<div style="margin:0 auto;width:600px;">
+<canvas id="myCanvas" width="600" height="600" style="border:3px solid #d3d3d3;">
+Your browser does not support the HTML5 canvas tag.
+</canvas>
+<button onclick="OnButtonClick()">key</button>
+</div >
+
+<script>
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+class UnionSet
+{
+    constructor(size)
+    {
+        this.set = new Array(size);
+        for(var i = this.set.length - 1; i >= 0; i--)
+        {
+            this.set[i] = -1;
+        }
+    }
+
+    union(root1, root2)
+    {
+        //this.set[root1] = root2;
+        //optimize，合并连通集也就是子树时尽量不增加树的高度
+        if(this.set[root1] < this.set[root2])
+        {
+        this.set[root2] = root1;
+        }
+        else
+        {
+        	if(this.set[root1] === this.set[root2])
+        	{
+            this.set[root2]--;
+        	}   
+        this.set[root1] = root2;
+        }  
+    }
+
+    findSet(x)
+    {
+        /*while(this.set[x] >= 0)
+        {
+            x = this.set[x];
+        }
+        return x;*/
+        //optimize，改为共同指向连通集代表而不是链表
+        if(this.set[x] < 0) return x;
+    	return this.set[x] = this.findSet(this.set[x]);
+    }
+
+    sameSet(x, y)
+    {
+        return this.findSet(x) === this.findSet(y);
+    }
+
+    unionElement(x, y)
+    {
+        this.union(this.findSet(x), this.findSet(y));
+    }
+
+}
+
+class Maze
+{
+    constructor(width,height,columns, rows, cavans,offsetX,offsetY)
+    {
+    	//JS的类，成员变量的声明&定义是在constructor中
+    	//差点以为不需要事先声明23333333333333感觉很toy
+        this.width=width;
+        this.height=height;
+        this.columns = columns;
+        this.rows = rows;
+        this.cells = columns * rows;
+        //存放是连通的格子，{1: [2, 11]}表示第1个格子和第2、11个格子是相通的
+        this.linkedMap = {};
+        this.unionSets = new UnionSet(this.cells);
+        this.canvas = canvas;
+        this.offsetX=offsetX;
+        this.offsetY=offsetY;
+    }
+
+    generate()
+    {
+   	 while(!this.linkedToFirstCell())
+  	 {
+   	     var cellPairs = this.pickRandomCellPairs();
+   	     if(!this.unionSets.sameSet(cellPairs[0], cellPairs[1]))
+   	     {
+  	          this.unionSets.unionElement(cellPairs[0], cellPairs[1]);
+    	        	this.addLinkedMap(cellPairs[0], cellPairs[1]);
+    	     }   
+   	 }   
+     }
+
+     linkedToFirstCell()
+     {
+    	for(var i = 1; i < this.cells; i++)
+    	{
+        	if(!this.unionSets.sameSet(0, i)) 
+            return false;
+    	}   
+   	 return true;
+     }
+
+     pickRandomCellPairs()
+     {
+    	var cell = (Math.random() * this.cells) >> 0;
+    	var neiborCells = []; 
+    	var row = (cell / this.columns) >> 0,
+   	     column = cell % this.columns;
+   	if(row !== 0)
+    	{ 
+     	   neiborCells.push(cell - this.columns);
+ 	 }   
+ 	 if(row !== this.rows - 1)
+ 	 { 
+       	 neiborCells.push(cell + this.columns);
+  	 }   
+   	 if(column !== 0)
+  	 { 
+    	    neiborCells.push(cell - 1); 
+   	 }   
+  	 if(column !== this.columns - 1)
+  	 { 
+  	      neiborCells.push(cell + 1); 
+  	 }   
+   	 var index = (Math.random() * neiborCells.length) >> 0;
+   	 return [cell, neiborCells[index]];
+   }
+
+    addLinkedMap(x, y)
+  {
+    if(!this.linkedMap[x]) this.linkedMap[x] = [];
+    if(!this.linkedMap[y]) this.linkedMap[y] = [];
+    if(this.linkedMap[x].indexOf(y) < 0)
+    {
+        this.linkedMap[x].push(y);
+    }
+    if(this.linkedMap[y].indexOf(x) < 0)
+    {
+        this.linkedMap[y].push(x);
+    }
+ }
+
+ draw()
+ { 
+    var linkedMap = this.linkedMap;
+    var cellWidth = this.width / this.columns;
+    var  cellHeight = this.height / this.rows;
+    //chain
+    var canvasBuffer = document.createElement("canvas");
+    canvasBuffer.width = this.canvas.width;
+    canvasBuffer.height = this.canvas.height;
+    var ctx = canvasBuffer.getContext("2d");
+    //translate 0.5个像素，避免模糊
+    //ctx.translate(0.5, 0.5);
+    for(var i = 0; i < this.cells; i++)
+    {
+        var row = i / this.columns >> 0,
+            column = i % this.columns;
+        //画右边的竖线
+        if(column !== this.columns - 1 && (!linkedMap[i] || linkedMap[i].indexOf(i + 1) < 0))
+        {
+            ctx.moveTo((column + 1) * cellWidth +this.offsetX, row * cellHeight +this.offsetY);
+            ctx.lineTo((column + 1) * cellWidth +this.offsetX, (row + 1) * cellHeight +this.offsetY);
+        }
+        //画下面的横线
+        if(row !== this.rows - 1 && (!linkedMap[i] || linkedMap[i].indexOf(i + this.columns) < 0)){
+            ctx.moveTo(column * cellWidth +this.offsetX, (row + 1) * cellHeight +this.offsetY);
+            ctx.lineTo((column + 1) * cellWidth +this.offsetX, (row + 1) * cellHeight +this.offsetY);
+        }
+    }
+    //画迷宫的四条边框
+    ctx.moveTo(0+this.offsetX,0+this.offsetY);
+    ctx.lineTo(this.width+this.offsetX,0+this.offsetY);
+    ctx.moveTo(this.width+this.offsetX,0+this.offsetY);
+    ctx.lineTo(this.width+this.offsetX,this.height-cellHeight+this.offsetY);
+    ctx.moveTo(0+this.offsetX,cellHeight+this.offsetY);
+    ctx.lineTo(0+this.offsetX,this.height+this.offsetY);
+    ctx.moveTo(0+this.offsetX,this.height+this.offsetY);
+    ctx.lineTo(this.width+this.offsetX,this.height+this.offsetY);
+    //最后再一次性stroke，提高性能
+    ctx.stroke();
+    //this.drawPath();
+    console.log("draw");
+    this.canvas.getContext("2d").drawImage(canvasBuffer, 0, 0);
+ }
+
+//因为无权，Dijkstra直接简化成BFS
+calPath()
+{
+    var pathTable = new Array(this.cells);
+    for(var i = 0; i < pathTable.length; i++)
+    {
+        pathTable[i] = {known: false, prevCell: -1};
+    }   
+    pathTable[0].known = true;
+    var map = this.linkedMap;
+    //用一个队列存储当前层的节点，先进队列的结点优先处理
+    var unSearchCells = [0];
+    while(!pathTable[pathTable.length - 1].known && unSearchCells.length)
+    {
+          var cell = unSearchCells.pop();
+          for(var i = 0; i < map[cell].length; i++)
+          {
+                if(pathTable[map[cell][i]].known) continue;
+                pathTable[map[cell][i]].known = true;
+                pathTable[map[cell][i]].prevCell = cell; 
+                unSearchCells.unshift(map[cell][i]);
+           }
+   }
+    var cell = this.cells - 1;
+    var path = [cell];
+    while(cell !== 0)
+    {
+        var cell = pathTable[cell].prevCell;
+        path.push(cell);
+    }
+    return path;
+ }
+
+ drawPath()
+ {
+ 	var path=this.calPath();
+ 	var ctx = this.canvas.getContext("2d");
+ 	var cellWidth = this.width / this.columns;
+    	var  cellHeight = this.height / this.rows;
+ 	var row=0,column=0;
+ 	var offsetX=this.offsetX+0.5*cellWidth;
+ 	var offsetY=this.offsetY+0.5*cellHeight;
+ 	for(var i=path.length-2;i>=0;i--)
+ 	{
+ 		ctx.moveTo(column * cellWidth +offsetX, row * cellHeight +offsetY);
+ 		row = path[i]/ this.columns >> 0;
+            	column = path[i] % this.columns;
+            	ctx.lineTo(column  * cellWidth +offsetX, row * cellHeight +offsetY);
+ 	}
+ 	ctx.moveTo(column * cellWidth +offsetX, row * cellHeight +offsetY);
+ 	ctx.lineTo(this.width+this.offsetX-0.5*cellWidth,this.height+this.offsetY-0.5*cellHeight);
+ 	ctx.strokeStyle="#00FF00";
+ 	ctx.stroke();
+ }
+
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+const column = 50,
+      row = 50,
+      MazeWidth=500,
+      MazeHeight=500;
+var canvas = document.getElementById("myCanvas");
+var offsetX=(canvas.width-MazeWidth)/2;
+var offsetY=(canvas.height-MazeHeight)/2;
+var maze = new Maze(MazeWidth,MazeHeight,column, row, canvas,offsetX,offsetY);
+
+console.time("generate maze");
+maze.generate();
+console.timeEnd("generate maze");
+console.time("draw maze");
+maze.draw();
+console.timeEnd("draw maze");
+
+
+function OnButtonClick()
+{
+	maze.drawPath();
+}
+</script>
+
+</body>
+</html>
