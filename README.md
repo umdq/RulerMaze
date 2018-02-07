@@ -3,6 +3,8 @@ _It generates maze procedurally based on a terrain system like minecraft,_
 _and you can control balls to exit with the gravity sensor of the phone._
 ![](https://github.com/EagerCleaverInWind/RulerMaze/blob/master/RulerMaze/screenshots/S71103-213739.jpg)
   
+## Note
+In unity,start at the persistent scene but not the primary menu scene.
 ## 2D Mode
 ![](https://github.com/EagerCleaverInWind/RulerMaze/blob/master/RulerMaze/screenshots/S71103-213830.jpg)
   
